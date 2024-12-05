@@ -37,6 +37,22 @@ fn get_os_info() os_info {
     return out;
 }
 
+fn pick_message() *const []const u8 {
+    const messages = [_][]const u8{
+        "Good hunting sir",
+        "Happy coding",
+        "Good luck out there",
+        "For science. You monster",
+        "Rock and stone",
+        "Amen brother",
+        "Time to face the music",
+        "May your updates be many and your errors few",
+    };
+
+    var rnd = std.rand.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
+    return &messages[rnd.random().uintLessThan(usize, messages.len)];
+}
+
 pub fn main() !void {
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
@@ -63,6 +79,6 @@ pub fn main() !void {
     try stdout.print("UPTIME   {}:{:0>2}:{:0>2}\n", .{ uptime_hours, uptime_minutes, uptime_seconds });
     try stdout.print("   RAM   {}Gb ({}Gb used)\n", .{ ram_total_gb, ram_used_gb });
     try stdout.print(" PROCS   {}\n\n", .{sysinfo.procs});
-    try stdout.print("Good hunting!\n", .{});
+    try stdout.print("{s}\n", .{pick_message().*});
     try bw.flush();
 }
