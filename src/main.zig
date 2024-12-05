@@ -60,13 +60,15 @@ pub fn main() !void {
 
     var hostname: [64]u8 = undefined;
     var sysinfo = c.struct_sysinfo{};
-    _ = c.gethostname(&hostname, hostname.len);
-    _ = c.sysinfo(&sysinfo);
-    const username = c.getlogin();
 
-    const uptime_hours: u64 = @divFloor(@as(u64, @intCast(sysinfo.uptime)), 60 * 60);
-    const uptime_minutes = @mod(@divFloor(@as(u64, @intCast(sysinfo.uptime)), 60), 60);
-    const uptime_seconds = @mod(@as(u64, @intCast(sysinfo.uptime)), 60);
+    if (c.gethostname(&hostname, hostname.len) != 0) {
+        // NOTE(Julius): This isnt pretty. But it works!
+        @setCold(true);
+        @memcpy(hostname[0..7], "Unknown");
+    }
+
+    const show_uptime = c.sysinfo(&sysinfo) == 0;
+    const username = c.getlogin();
 
     const ram_total_gb = @divFloor(sysinfo.totalram, std.math.pow(u64, 1024, 3));
     const ram_used_gb = @divFloor(sysinfo.totalram - sysinfo.freeram, std.math.pow(u64, 1024, 3));
@@ -76,7 +78,16 @@ pub fn main() !void {
     try stdout.print("Hello, {s}!\n\n", .{username});
     try stdout.print("You are logged into {s}\n\n", .{hostname});
     try stdout.print("    OS   {s}\n", .{info.pretty_name});
-    try stdout.print("UPTIME   {}:{:0>2}:{:0>2}\n", .{ uptime_hours, uptime_minutes, uptime_seconds });
+
+    if (show_uptime) {
+        const uptime_hours: u64 = @divFloor(@as(u64, @intCast(sysinfo.uptime)), 60 * 60);
+        const uptime_minutes = @mod(@divFloor(@as(u64, @intCast(sysinfo.uptime)), 60), 60);
+        const uptime_seconds = @mod(@as(u64, @intCast(sysinfo.uptime)), 60);
+        try stdout.print("UPTIME   {}:{:0>2}:{:0>2}\n", .{ uptime_hours, uptime_minutes, uptime_seconds });
+    } else {
+        try stdout.print("UPTIME   ???\n", .{});
+    }
+
     try stdout.print("   RAM   {}Gb ({}Gb used)\n", .{ ram_total_gb, ram_used_gb });
     try stdout.print(" PROCS   {}\n\n", .{sysinfo.procs});
     try stdout.print("{s}\n", .{pick_message().*});
