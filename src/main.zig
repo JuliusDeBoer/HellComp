@@ -47,6 +47,8 @@ fn pick_message() *const []const u8 {
         "Amen brother",
         "Time to face the music",
         "May your updates be many and your errors few",
+        "Lets dance",
+        "\x1b[31mMankind is dead.\nBlood is fuel.\nHell is full.\x1b[0m",
     };
 
     var rnd = std.rand.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
