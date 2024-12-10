@@ -1,7 +1,8 @@
 const std = @import("std");
 const c = @cImport({
-    @cInclude("unistd.h");
     @cInclude("sys/sysinfo.h");
+    @cInclude("sys/utsname.h");
+    @cInclude("unistd.h");
 });
 
 const os_info = struct {
@@ -72,6 +73,9 @@ pub fn main() !void {
     const show_uptime = c.sysinfo(&sysinfo) == 0;
     const username = c.getlogin();
 
+    var uname = c.struct_utsname{};
+    _ = c.uname(&uname);
+
     const ram_total_gb = @divFloor(sysinfo.totalram, std.math.pow(u64, 1024, 3));
     const ram_used_gb = @divFloor(sysinfo.totalram - sysinfo.freeram, std.math.pow(u64, 1024, 3));
 
@@ -80,6 +84,7 @@ pub fn main() !void {
     try stdout.print("Hello, {s}!\n\n", .{username});
     try stdout.print("You are logged into {s}\n\n", .{hostname});
     try stdout.print("    OS   {s}\n", .{info.pretty_name});
+    try stdout.print("KERNEL   {s} v{s}\n", .{ uname.sysname, uname.release });
 
     if (show_uptime) {
         const uptime_hours: u64 = @divFloor(@as(u64, @intCast(sysinfo.uptime)), 60 * 60);
