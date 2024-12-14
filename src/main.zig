@@ -38,7 +38,7 @@ fn get_os_info() os_info {
     return out;
 }
 
-fn pick_message() *const []const u8 {
+fn print_message(out: anytype) void {
     const messages = [_][]const u8{
         "Good hunting sir",
         "Happy coding",
@@ -50,10 +50,36 @@ fn pick_message() *const []const u8 {
         "May your updates be many and your errors few",
         "Lets dance",
         "\x1b[31mMankind is dead.\nBlood is fuel.\nHell is full.\x1b[0m",
+        "We ball",
     };
 
     var rnd = std.rand.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
-    return &messages[rnd.random().uintLessThan(usize, messages.len)];
+    out.print("{s}\n", .{messages[rnd.random().uintLessThan(usize, messages.len)]}) catch {};
+}
+
+fn print_uptime(out: anytype, uptime: u64) void {
+    const uptime_hours: u64 = @divFloor(uptime, 60 * 60);
+    const uptime_minutes = @mod(@divFloor(uptime, 60), 60);
+    const uptime_seconds = @mod(@as(u64, uptime), 60);
+    out.print(
+        "UPTIME   {}:{:0>2}:{:0>2}\n",
+        .{ uptime_hours, uptime_minutes, uptime_seconds },
+    ) catch {};
+}
+
+fn print_kernel(out: anytype, uname: c.struct_utsname) void {
+    out.print("KERNEL   {s} v{s}\n", .{ uname.sysname, uname.release }) catch {};
+}
+
+fn print_ram(out: anytype, sysinfo: c.struct_sysinfo) void {
+    const ram_total_gb = @divFloor(sysinfo.totalram, std.math.pow(u64, 1024, 3));
+    const ram_used_gb = @divFloor(sysinfo.totalram - sysinfo.freeram, std.math.pow(u64, 1024, 3));
+
+    out.print("   RAM   {}Gb ({}Gb used)\n", .{ ram_total_gb, ram_used_gb }) catch {};
+}
+
+fn print_procs(out: anytype, sysinfo: c.struct_sysinfo) void {
+    out.print(" PROCS   {}\n\n", .{sysinfo.procs}) catch {};
 }
 
 pub fn main() !void {
@@ -71,32 +97,21 @@ pub fn main() !void {
     }
 
     const show_uptime = c.sysinfo(&sysinfo) == 0;
-    const username = c.getlogin();
-
     var uname = c.struct_utsname{};
+
     _ = c.uname(&uname);
-
-    const ram_total_gb = @divFloor(sysinfo.totalram, std.math.pow(u64, 1024, 3));
-    const ram_used_gb = @divFloor(sysinfo.totalram - sysinfo.freeram, std.math.pow(u64, 1024, 3));
-
-    const info = get_os_info();
-
-    try stdout.print("Hello, {s}!\n\n", .{username});
+    try stdout.print("Hello, {s}!\n\n", .{c.getlogin()});
     try stdout.print("You are logged into {s}\n\n", .{hostname});
-    try stdout.print("    OS   {s}\n", .{info.pretty_name});
-    try stdout.print("KERNEL   {s} v{s}\n", .{ uname.sysname, uname.release });
+
+    print_kernel(stdout, uname);
 
     if (show_uptime) {
-        const uptime_hours: u64 = @divFloor(@as(u64, @intCast(sysinfo.uptime)), 60 * 60);
-        const uptime_minutes = @mod(@divFloor(@as(u64, @intCast(sysinfo.uptime)), 60), 60);
-        const uptime_seconds = @mod(@as(u64, @intCast(sysinfo.uptime)), 60);
-        try stdout.print("UPTIME   {}:{:0>2}:{:0>2}\n", .{ uptime_hours, uptime_minutes, uptime_seconds });
-    } else {
-        try stdout.print("UPTIME   ???\n", .{});
+        print_uptime(stdout, @intCast(sysinfo.uptime));
     }
 
-    try stdout.print("   RAM   {}Gb ({}Gb used)\n", .{ ram_total_gb, ram_used_gb });
-    try stdout.print(" PROCS   {}\n\n", .{sysinfo.procs});
-    try stdout.print("{s}\n", .{pick_message().*});
+    print_ram(stdout, sysinfo);
+    print_procs(stdout, sysinfo);
+    print_message(stdout);
+
     try bw.flush();
 }
