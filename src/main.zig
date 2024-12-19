@@ -87,7 +87,7 @@ pub fn main() !void {
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
 
-    var hostname: [64]u8 = undefined;
+    var hostname: [64]u8 = std.mem.zeroes([64]u8);
     var sysinfo = c.struct_sysinfo{};
 
     if (c.gethostname(&hostname, hostname.len) != 0) {
