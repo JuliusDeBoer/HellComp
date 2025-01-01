@@ -24,6 +24,7 @@
       buildPhase = ''
           mkdir -p $out/cache $out/global-cache
           zig build --release=fast --cache-dir $out/cache --global-cache-dir $out/global-cache
+          rm -rf $out/cache $out/global-cache
       '';
 
       installPhase = ''
