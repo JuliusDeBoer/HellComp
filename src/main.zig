@@ -49,6 +49,7 @@ fn print_message(out: anytype) void {
         "Time to face the music",
         "May your updates be many and your errors few",
         "Lets dance",
+        "We ride at dawn",
         "\x1b[31mMankind is dead.\nBlood is fuel.\nHell is full.\x1b[0m",
         "We ball",
     };
