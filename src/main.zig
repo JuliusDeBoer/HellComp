@@ -54,7 +54,7 @@ fn print_message(out: anytype) void {
         "We ball",
     };
 
-    var rnd = std.rand.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
+    var rnd = std.Random.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
     out.print("{s}\n", .{messages[rnd.random().uintLessThan(usize, messages.len)]}) catch {};
 }
 
@@ -92,8 +92,8 @@ pub fn main() !void {
     var sysinfo = c.struct_sysinfo{};
 
     if (c.gethostname(&hostname, hostname.len) != 0) {
-        // NOTE(Julius): This isnt pretty. But it works!
-        @setCold(true);
+        @branchHint(.cold);
+        // NOTE(Julius): A raw memcpy isn't the prettiest thing. However it is the easiest.
         @memcpy(hostname[0..7], "Unknown");
     }
 
