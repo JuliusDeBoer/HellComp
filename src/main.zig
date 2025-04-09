@@ -52,7 +52,7 @@ fn print_message(out: anytype) void {
         "We ride at dawn",
         "\x1b[31mMankind is dead.\nBlood is fuel.\nHell is full.\x1b[0m",
         "We ball",
-        "THIS THINKPAD IS ENSURED TO\nSURPASS EXPECTATIONS,\n,OUTCLASS ITS COMPETITORS\nAND LIVE TILL THE BITTER END.\nPLEASE HANDLE WITH CARE",
+        "THIS THINKPAD IS ENSURED TO\nSURPASS EXPECTATIONS,\nOUTCLASS ITS COMPETITORS\nAND LIVE TILL THE BITTER END.\nPLEASE HANDLE WITH CARE",
     };
 
     var rnd = std.Random.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
@@ -75,7 +75,7 @@ fn print_kernel(out: anytype, uname: c.struct_utsname) void {
 
 fn print_ram(out: anytype, sysinfo: c.struct_sysinfo) void {
     const ram_total_gb = @divFloor(sysinfo.totalram, std.math.pow(u64, 1024, 3));
-    const ram_used_gb = @divFloor(sysinfo.totalram - sysinfo.freeram, std.math.pow(u64, 1024, 3));
+    const ram_used_gb = @divFloor(sysinfo.totalram - sysinfo.freeram - sysinfo.bufferram, std.math.pow(u64, 1024, 3));
 
     out.print("   RAM   {}Gb ({}Gb used)\n", .{ ram_total_gb, ram_used_gb }) catch {};
 }
