@@ -53,6 +53,7 @@ fn print_message(out: anytype) void {
         "\x1b[31mMankind is dead.\nBlood is fuel.\nHell is full.\x1b[0m",
         "We ball",
         "THIS THINKPAD IS ENSURED TO\nSURPASS EXPECTATIONS,\nOUTCLASS ITS COMPETITORS\nAND LIVE TILL THE BITTER END.\nPLEASE HANDLE WITH CARE",
+        "For the Glory of Mankind"
     };
 
     var rnd = std.Random.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
