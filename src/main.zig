@@ -38,7 +38,7 @@ fn get_os_info() os_info {
     return out;
 }
 
-fn print_message(out: anytype) void {
+fn print_message(out: *std.Io.Writer) void {
     const messages = [_][]const u8{
         "Good hunting sir",
         "Happy coding",
@@ -53,14 +53,14 @@ fn print_message(out: anytype) void {
         "\x1b[31mMankind is dead.\nBlood is fuel.\nHell is full.\x1b[0m",
         "We ball",
         "THIS THINKPAD IS ENSURED TO\nSURPASS EXPECTATIONS,\nOUTCLASS ITS COMPETITORS\nAND LIVE TILL THE BITTER END.\nPLEASE HANDLE WITH CARE",
-        "For the Glory of Mankind"
+        "For the Glory of Mankind",
     };
 
     var rnd = std.Random.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
     out.print("{s}\n", .{messages[rnd.random().uintLessThan(usize, messages.len)]}) catch {};
 }
 
-fn print_uptime(out: anytype, uptime: u64) void {
+fn print_uptime(out: *std.Io.Writer, uptime: u64) void {
     const uptime_hours: u64 = @divFloor(uptime, 60 * 60);
     const uptime_minutes = @mod(@divFloor(uptime, 60), 60);
     const uptime_seconds = @mod(@as(u64, uptime), 60);
@@ -70,25 +70,25 @@ fn print_uptime(out: anytype, uptime: u64) void {
     ) catch {};
 }
 
-fn print_kernel(out: anytype, uname: c.struct_utsname) void {
+fn print_kernel(out: *std.Io.Writer, uname: c.struct_utsname) void {
     out.print("KERNEL   {s} v{s}\n", .{ uname.sysname, uname.release }) catch {};
 }
 
-fn print_ram(out: anytype, sysinfo: c.struct_sysinfo) void {
+fn print_ram(out: *std.Io.Writer, sysinfo: c.struct_sysinfo) void {
     const ram_total_gb = @divFloor(sysinfo.totalram, std.math.pow(u64, 1024, 3));
     const ram_used_gb = @divFloor(sysinfo.totalram - sysinfo.freeram - sysinfo.bufferram, std.math.pow(u64, 1024, 3));
 
     out.print("   RAM   {}Gb ({}Gb used)\n", .{ ram_total_gb, ram_used_gb }) catch {};
 }
 
-fn print_procs(out: anytype, sysinfo: c.struct_sysinfo) void {
+fn print_procs(out: *std.Io.Writer, sysinfo: c.struct_sysinfo) void {
     out.print(" PROCS   {}\n\n", .{sysinfo.procs}) catch {};
 }
 
 pub fn main() !void {
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    const stdout_file = std.fs.File.stdout();
+    var buffer: [1024]u8 = undefined;
+    var stdout_writer = stdout_file.writer(&buffer);
 
     var hostname: [64]u8 = std.mem.zeroes([64]u8);
     var sysinfo = c.struct_sysinfo{};
@@ -102,19 +102,20 @@ pub fn main() !void {
     const show_uptime = c.sysinfo(&sysinfo) == 0;
     var uname = c.struct_utsname{};
 
-    _ = c.uname(&uname);
-    try stdout.print("Hello, {s}!\n\n", .{c.getlogin()});
-    try stdout.print("You are logged into {s}\n\n", .{hostname});
-
-    print_kernel(stdout, uname);
-
-    if (show_uptime) {
-        print_uptime(stdout, @intCast(sysinfo.uptime));
+    if (c.uname(&uname) == 0) {
+        stdout_writer.interface.print("Hello, {s}!\n\n", .{c.getlogin()}) catch {};
+        stdout_writer.interface.print("You are logged into {s}\n\n", .{hostname}) catch {};
     }
 
-    print_ram(stdout, sysinfo);
-    print_procs(stdout, sysinfo);
-    print_message(stdout);
+    print_kernel(&stdout_writer.interface, uname);
 
-    try bw.flush();
+    if (show_uptime) {
+        print_uptime(&stdout_writer.interface, @intCast(sysinfo.uptime));
+    }
+
+    print_ram(&stdout_writer.interface, sysinfo);
+    print_procs(&stdout_writer.interface, sysinfo);
+    print_message(&stdout_writer.interface);
+
+    try stdout_writer.interface.flush();
 }
