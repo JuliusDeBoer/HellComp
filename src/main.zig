@@ -38,7 +38,7 @@ fn get_os_info() os_info {
     return out;
 }
 
-fn print_message(out: *std.Io.Writer) void {
+fn print_message(out: *std.Io.Writer, rng: std.Random) void {
     const messages = [_][]const u8{
         "Good hunting sir",
         "Happy coding",
@@ -56,8 +56,7 @@ fn print_message(out: *std.Io.Writer) void {
         "For the Glory of Mankind",
     };
 
-    var rnd = std.Random.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
-    out.print("{s}\n", .{messages[rnd.random().uintLessThan(usize, messages.len)]}) catch {};
+    out.print("{s}\n", .{messages[rng.intRangeLessThan(usize, 0, messages.len)]}) catch {};
 }
 
 fn print_uptime(out: *std.Io.Writer, uptime: u64) void {
@@ -85,10 +84,10 @@ fn print_procs(out: *std.Io.Writer, sysinfo: c.struct_sysinfo) void {
     out.print(" PROCS   {}\n\n", .{sysinfo.procs}) catch {};
 }
 
-pub fn main() !void {
-    const stdout_file = std.fs.File.stdout();
+pub fn main(init: std.process.Init) !void {
+    const stdout_file = std.Io.File.stdout();
     var buffer: [1024]u8 = undefined;
-    var stdout_writer = stdout_file.writer(&buffer);
+    var stdout_writer = stdout_file.writer(init.io, &buffer);
 
     var hostname: [64]u8 = std.mem.zeroes([64]u8);
     var sysinfo = c.struct_sysinfo{};
@@ -113,9 +112,12 @@ pub fn main() !void {
         print_uptime(&stdout_writer.interface, @intCast(sysinfo.uptime));
     }
 
+    const rng_impl: std.Random.IoSource = .{ .io = init.io };
+    const secureRand = rng_impl.interface();
+
     print_ram(&stdout_writer.interface, sysinfo);
     print_procs(&stdout_writer.interface, sysinfo);
-    print_message(&stdout_writer.interface);
+    print_message(&stdout_writer.interface, secureRand);
 
     try stdout_writer.interface.flush();
 }
